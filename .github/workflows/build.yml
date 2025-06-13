@@ -97,10 +97,9 @@ jobs:
       run: |
         tar -czf AutoYuque_V${{ env.VERSION }}_${{ matrix.platform }}${{ matrix.archive_ext }} AutoYuque_Build
 
-    - name: Create Release
-      id: create_release
+    - name: Upload Release Assets
       uses: softprops/action-gh-release@v1
-      if: (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')) && matrix.os == 'windows-latest'
+      if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
       with:
         tag_name: v${{ env.VERSION }}
         name: Auto-Yuque v${{ env.VERSION }} 多平台发布
@@ -147,7 +146,6 @@ jobs:
         draft: false
         prerelease: false
         files: |
-          AutoYuque_V${{ env.VERSION }}_Windows.zip
-          AutoYuque_V${{ env.VERSION }}_macOS.tar.gz
+          AutoYuque_V${{ env.VERSION }}_${{ matrix.platform }}${{ matrix.archive_ext }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
