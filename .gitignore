@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Privacy & Sensitive Files
+cookie.pkl
+*.cookie
+*.session
+*.log
+
+# Screenshots (may contain sensitive info)
+screenshots/
+
+# Data Files (may contain personal data)
+*.csv
+*.html
+*.jpeg
+*.jpg
+*.png
+
+# Chrome Driver (platform specific)
+driver/
+chromedriver*
+
+# Temporary files
+*.tmp
+*.temp

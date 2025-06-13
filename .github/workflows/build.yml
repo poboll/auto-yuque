@@ -1,0 +1,89 @@
+name: Auto-Yuque Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      packages: write
+
+    env:
+      VERSION: '1.0.0'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install 7zip
+      run: |
+        choco install 7zip -y
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --name AutoYuque main.py
+
+    - name: Create build directory
+      run: |
+        mkdir AutoYuque_Build
+        cp dist/AutoYuque.exe AutoYuque_Build/
+        cp config.json AutoYuque_Build/
+        cp README.md AutoYuque_Build/
+        cp LICENSE AutoYuque_Build/
+
+    - name: Create ZIP file
+      run: |
+        7z a AutoYuque_V${{ env.VERSION }}_Windows.zip AutoYuque_Build
+
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        tag_name: v${{ env.VERSION }}
+        name: Auto-Yuque v${{ env.VERSION }} Release
+        body: |
+          ## 🚀 Auto-Yuque v${{ env.VERSION }} 发布
+          
+          ### ✨ 新特性
+          - 🔐 智能登录管理 - 支持 Cookie 持久化
+          - 📝 小记自动化 - 完整的生命周期管理
+          - 🌟 社区互动 - 智能点赞和内容抓取
+          - 📚 知识库管理 - 自动创建和管理文档
+          - 👥 用户关注 - 智能发现和关注优质用户
+          - 🤖 AI 评论生成 - 高质量评论自动生成
+          
+          ### 📦 下载说明
+          1. 下载 `AutoYuque_V${{ env.VERSION }}_Windows.zip`
+          2. 解压到任意目录
+          3. 配置 `config.json` 文件
+          4. 运行 `AutoYuque.exe`
+          
+          ### ⚠️ 注意事项
+          - 需要安装 Chrome 浏览器
+          - 首次使用需要登录语雀账号
+          - 请合理使用，遵守平台规则
+        draft: false
+        prerelease: false
+        files: |
+          AutoYuque_V${{ env.VERSION }}_Windows.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
