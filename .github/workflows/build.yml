@@ -1,22 +1,50 @@
-name: Auto-Yuque Build and Release
+name: Build and Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+      create_release:
+        description: 'Create GitHub Release'
+        required: true
+        default: true
+        type: boolean
+      build_gui:
+        description: 'Build GUI version'
+        required: true
+        default: true
+        type: boolean
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            platform: Windows
+            ext: .exe
+            archive_cmd: 7z a
+            archive_ext: .zip
+          - os: macos-latest
+            platform: macOS
+            ext: ""
+            archive_cmd: tar -czf
+            archive_ext: .tar.gz
+    
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
       packages: write
 
     env:
-      VERSION: '1.0.0'
+      VERSION: ${{ github.event.inputs.version || github.ref_name || '1.0.0' }}
 
     steps:
     - name: Checkout code
@@ -27,9 +55,9 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Install 7zip
-      run: |
-        choco install 7zip -y
+    - name: Install 7zip (Windows)
+      if: matrix.os == 'windows-latest'
+      run: choco install 7zip -y
 
     - name: Install dependencies
       run: |
@@ -37,53 +65,89 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
 
-    - name: Build executable
+    - name: Build CLI executable
       run: |
-        pyinstaller --onefile --name AutoYuque main.py
+        pyinstaller --onefile --name AutoYuque-CLI${{ matrix.ext }} main.py
+
+    - name: Build GUI executable
+      if: github.event.inputs.build_gui == 'true' || github.event.inputs.build_gui == null
+      run: |
+        pyinstaller --onefile --windowed --name AutoYuque-GUI${{ matrix.ext }} gui.py
 
     - name: Create build directory
+      shell: bash
       run: |
-        mkdir AutoYuque_Build
-        cp dist/AutoYuque.exe AutoYuque_Build/
+        mkdir -p AutoYuque_Build
+        cp dist/AutoYuque-CLI${{ matrix.ext }} AutoYuque_Build/
+        if [ -f "dist/AutoYuque-GUI${{ matrix.ext }}" ]; then
+          cp dist/AutoYuque-GUI${{ matrix.ext }} AutoYuque_Build/
+        fi
         cp config.json AutoYuque_Build/
         cp README.md AutoYuque_Build/
         cp LICENSE AutoYuque_Build/
+        cp GUI_README.md AutoYuque_Build/ || true
 
-    - name: Create ZIP file
+    - name: Create archive (Windows)
+      if: matrix.os == 'windows-latest'
       run: |
-        7z a AutoYuque_V${{ env.VERSION }}_Windows.zip AutoYuque_Build
+        7z a AutoYuque_V${{ env.VERSION }}_${{ matrix.platform }}${{ matrix.archive_ext }} AutoYuque_Build
+
+    - name: Create archive (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        tar -czf AutoYuque_V${{ env.VERSION }}_${{ matrix.platform }}${{ matrix.archive_ext }} AutoYuque_Build
 
     - name: Create Release
       id: create_release
       uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
+      if: (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')) && matrix.os == 'windows-latest'
       with:
         tag_name: v${{ env.VERSION }}
-        name: Auto-Yuque v${{ env.VERSION }} Release
+        name: Auto-Yuque v${{ env.VERSION }} 多平台发布
         body: |
-          ## 🚀 Auto-Yuque v${{ env.VERSION }} 发布
+          ## 🚀 Auto-Yuque v${{ env.VERSION }} 全新发布
           
-          ### ✨ 新特性
-          - 🔐 智能登录管理 - 支持 Cookie 持久化
-          - 📝 小记自动化 - 完整的生命周期管理
-          - 🌟 社区互动 - 智能点赞和内容抓取
-          - 📚 知识库管理 - 自动创建和管理文档
-          - 👥 用户关注 - 智能发现和关注优质用户
-          - 🤖 AI 评论生成 - 高质量评论自动生成
+          ### ✨ 核心功能
+          - 🔐 **智能登录管理** - Cookie 持久化，免重复登录
+          - 📝 **智能小记** - 快速创建与管理，自动化生命周期
+          - 🌟 **社区互动** - AI智能点赞回复，提升社区参与度
+          - 📚 **知识管理** - 自动化文档创建，高效内容组织
+          - 👥 **用户发现** - 精准关注优质创作者，扩展人脉网络
+          - 🤖 **AI评论生成** - 高质量智能评论，增强互动体验
           
-          ### 📦 下载说明
+          ### 📦 多平台支持
+          
+          #### Windows 用户
           1. 下载 `AutoYuque_V${{ env.VERSION }}_Windows.zip`
           2. 解压到任意目录
-          3. 配置 `config.json` 文件
-          4. 运行 `AutoYuque.exe`
+          3. 运行 `AutoYuque-GUI.exe`（图形界面）或 `AutoYuque-CLI.exe`（命令行）
           
-          ### ⚠️ 注意事项
-          - 需要安装 Chrome 浏览器
-          - 首次使用需要登录语雀账号
-          - 请合理使用，遵守平台规则
+          #### macOS 用户
+          1. 下载 `AutoYuque_V${{ env.VERSION }}_macOS.tar.gz`
+          2. 解压：`tar -xzf AutoYuque_V${{ env.VERSION }}_macOS.tar.gz`
+          3. 运行 `./AutoYuque-GUI`（图形界面）或 `./AutoYuque-CLI`（命令行）
+          
+          ### 🎯 使用指南
+          1. **首次配置**：设置 ChromeDriver 路径
+          2. **登录验证**：扫码登录语雀账号
+          3. **功能选择**：根据需求选择对应功能模块
+          4. **智能运行**：享受自动化带来的便利
+          
+          ### ⚠️ 重要提醒
+          - 📋 需要安装 Chrome 浏览器及对应版本的 ChromeDriver
+          - 🔑 首次使用需要登录语雀账号进行授权
+          - 📖 请遵守语雀平台使用规则，合理使用自动化功能
+          - 🛡️ 建议在测试环境中先行验证功能效果
+          
+          ### 🆕 本版本更新
+          - 🎨 优化界面设计，提升用户体验
+          - 🔧 增加多平台支持（Windows & macOS）
+          - 📱 提供GUI和CLI双版本选择
+          - 🚀 改进构建流程，提高稳定性
         draft: false
         prerelease: false
         files: |
           AutoYuque_V${{ env.VERSION }}_Windows.zip
+          AutoYuque_V${{ env.VERSION }}_macOS.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

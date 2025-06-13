@@ -1905,17 +1905,41 @@ def main():
         print(f"ℹ️ 使用本地ChromeDriver: {driver_path}")
         # 使用旧版方式创建ChromeDriver (适用于较早版本的Selenium)
         driver = webdriver.Chrome(executable_path=driver_path)
-        driver.maximize_window()
+        
+        # 设置浏览器窗口大小为屏幕的3/4
+        driver.execute_script("""
+            const screenWidth = window.screen.width;
+            const screenHeight = window.screen.height;
+            const windowWidth = Math.floor(screenWidth * 0.75);
+            const windowHeight = Math.floor(screenHeight * 0.75);
+            const x = Math.floor((screenWidth - windowWidth) / 2);
+            const y = Math.floor((screenHeight - windowHeight) / 2);
+            window.resizeTo(windowWidth, windowHeight);
+            window.moveTo(x, y);
+        """)
+        
         driver.implicitly_wait(5)  # 隐式等待，增加稳定性
-        print("✅ WebDriver 初始化成功")
+        print("✅ WebDriver 初始化成功 (窗口大小设置为屏幕的3/4)")
     except Exception as e:
         # 尝试使用较新版本的Selenium语法
         try:
             service = ChromeService(executable_path=driver_path)
             driver = webdriver.Chrome(service=service)
-            driver.maximize_window()
+            
+            # 设置浏览器窗口大小为屏幕的3/4
+            driver.execute_script("""
+                const screenWidth = window.screen.width;
+                const screenHeight = window.screen.height;
+                const windowWidth = Math.floor(screenWidth * 0.75);
+                const windowHeight = Math.floor(screenHeight * 0.75);
+                const x = Math.floor((screenWidth - windowWidth) / 2);
+                const y = Math.floor((screenHeight - windowHeight) / 2);
+                window.resizeTo(windowWidth, windowHeight);
+                window.moveTo(x, y);
+            """)
+            
             driver.implicitly_wait(5)
-            print("✅ WebDriver 初始化成功 (使用Service API)")
+            print("✅ WebDriver 初始化成功 (使用Service API，窗口大小设置为屏幕的3/4)")
         except Exception as e2:
             print(f"❌ WebDriver 初始化失败:")
             print(f"   - 尝试方法1: {e}")
